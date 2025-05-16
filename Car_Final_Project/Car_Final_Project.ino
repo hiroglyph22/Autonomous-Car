@@ -4,6 +4,7 @@
 String dummy;
 
 uint16_t sensorValues[8];
+//uint16_t summed_values[8];
 
 int current_position = -40;
 int increment_position = 4;
@@ -14,7 +15,7 @@ int error = 0;
 int prev_error = 0;
 int base_speed = 30;
 int max_error = 3000;
-double Kp = 0.0083;
+float Kp = 0.004;
 int steering_correction = 0;
 
 const int left_nslp_pin=31; // nslp HIGH ==> awake & ready for PWM
@@ -42,7 +43,12 @@ void setup() {
 
   digitalWrite(left_nslp_pin,HIGH);
   digitalWrite(right_nslp_pin,HIGH);
+  // digitalWrite(left_nslp_pin,LOW);
+  // digitalWrite(right_nslp_pin,LOW);
   
+  digitalWrite(left_dir_pin,LOW);  // Set car direction to forward
+  digitalWrite(right_dir_pin,LOW);
+
   resetEncoderCount_left();
   resetEncoderCount_right();
 
@@ -51,7 +57,11 @@ void setup() {
 
 void loop() {
 
-  dummy = Serial.readString();
+  //dummy = Serial.readString();
+
+  // Read raw sensor values
+  ECE3_read_IR(sensorValues);
+
   int summed_values[8] = { 0 };
 
   // Take the average of 5 consecutive values for each sensor
@@ -64,12 +74,6 @@ void loop() {
       summed_values[i] += sensorValues[i];
     }
   }
-
-  // for (unsigned char i = 0; i < 8; i++) {
-  //   Serial.print(summed_values[i] / number_samples);
-  //   Serial.print('\t'); // tab to format the raw data into columns in the Serial monitor
-  // }
-  // Serial.println();
 
   for (unsigned char i = 0; i < 8; i++) {
     summed_values[i] /= number_samples;
@@ -118,20 +122,16 @@ void loop() {
   // Serial.println(summed_values[7]);
   // Serial.println();
 
-
   //Serial.println(error);
   steering_correction = -Kp * error;
 
   // Serial.println(steering_correction);
   // Serial.println();
-
-  digitalWrite(left_dir_pin,LOW);  // Set car direction to forward
-  digitalWrite(right_dir_pin,LOW);
   
   // ChangeWheelSpeeds(0, steering_correction, 0, -steering_correction);
 
-  analogWrite(left_pwm_pin,10 + steering_correction);
-  analogWrite(right_pwm_pin,10 + -steering_correction);
+  analogWrite(left_pwm_pin,base_speed + steering_correction);
+  analogWrite(right_pwm_pin,base_speed + -steering_correction);
 
   // // // Print average values (average value = summed_values / number_samples
   // // for (unsigned char i = 0; i < 8; i++) {
@@ -139,36 +139,6 @@ void loop() {
   // //   Serial.print('\t');  // tab to format the raw data into columns in the Serial monitor
   // // }
   // // Serial.println();
+  
   prev_error = error;
 }
-
-void  ChangeWheelSpeeds(int initialLeftSpd, int finalLeftSpd, int initialRightSpd, int finalRightSpd) {
-/*  
- *   This function changes the car speed gradually (in about 30 ms) from initial
- *   speed to final speed. This non-instantaneous speed change reduces the load 
- *   on the plastic geartrain, and reduces the failure rate of the motors. 
- */
-  int diffLeft  = finalLeftSpd-initialLeftSpd;
-  int diffRight = finalRightSpd-initialRightSpd;
-  int stepIncrement = 20;
-  int numStepsLeft  = abs(diffLeft)/stepIncrement;
-  int numStepsRight = abs(diffRight)/stepIncrement;
-  int numSteps = max(numStepsLeft,numStepsRight);
-  
-  int pwmLeftVal = initialLeftSpd;        // initialize left wheel speed 
-  int pwmRightVal = initialRightSpd;      // initialize right wheel speed 
-  int deltaLeft = (diffLeft)/numSteps;    // left in(de)crement
-  int deltaRight = (diffRight)/numSteps;  // right in(de)crement
-
-  for(int k=0;k<numSteps;k++) {
-    pwmLeftVal = pwmLeftVal + deltaLeft;
-    pwmRightVal = pwmRightVal + deltaRight;
-    analogWrite(left_pwm_pin,pwmLeftVal);    
-    analogWrite(right_pwm_pin,pwmRightVal); 
-    delay(30);   
-  } // end for int k
-//  if(finalLeftSpd  == 0) analogWrite(left_pwm_pin,0); ;
-//  if(finalRightSpd == 0) analogWrite(right_pwm_pin,0);
-  analogWrite(left_pwm_pin,finalLeftSpd);  
-  analogWrite(right_pwm_pin,finalRightSpd);  
-} // end void  ChangeWheelSpeeds
