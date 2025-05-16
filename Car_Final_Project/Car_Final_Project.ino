@@ -16,6 +16,7 @@ int prev_error = 0;
 int base_speed = 30;
 int max_error = 3000;
 float Kp = 0.004;
+float Kd = 0;
 int steering_correction = 0;
 
 const int left_nslp_pin=31; // nslp HIGH ==> awake & ready for PWM
@@ -51,6 +52,8 @@ void setup() {
 
   resetEncoderCount_left();
   resetEncoderCount_right();
+
+  Kd = Kp * 5;
 
   delay(2000);
 }
@@ -125,13 +128,15 @@ void loop() {
   //Serial.println(error);
   steering_correction = -Kp * error;
 
+  Kd_correction = Kd * (error - prev_error);  
+
   // Serial.println(steering_correction);
   // Serial.println();
   
   // ChangeWheelSpeeds(0, steering_correction, 0, -steering_correction);
 
-  analogWrite(left_pwm_pin,base_speed + steering_correction);
-  analogWrite(right_pwm_pin,base_speed + -steering_correction);
+  analogWrite(left_pwm_pin,base_speed + steering_correction + Kd_correction);
+  analogWrite(right_pwm_pin,base_speed + -steering_correction - Kd_correction);
 
   // // // Print average values (average value = summed_values / number_samples
   // // for (unsigned char i = 0; i < 8; i++) {
