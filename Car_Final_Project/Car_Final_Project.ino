@@ -14,7 +14,7 @@ int error = 0;
 int prev_error = 0;
 int base_speed = 15;
 int max_error = 3000;
-float Kp = 0.002;
+float Kp = 0.003;
 float Kd = 0;
 int steering_correction = 0;
 int Kd_correction = 0;
@@ -114,7 +114,7 @@ void loop() {
   summed_values[6] /= 1469;
   summed_values[7] /= 1305;
 
-  error = (summed_values[0] * -30 + summed_values[1] * -16 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 16 + summed_values[7] * 30) / 8;
+  error = (summed_values[0] * -40 + summed_values[1] * -20 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 20 + summed_values[7] * 40) / 8;
 
   //error = (summed_values[0] * -15 + summed_values[1] * -14 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 14 + summed_values[7] * 15) / 8;
   // Serial.println(summed_values[0]);
@@ -140,11 +140,19 @@ void loop() {
 
   if (total_correction > base_speed) {
     digitalWrite(right_dir_pin,HIGH);
-    analogWrite(right_pwm_pin, total_correction/4 - base_speed);
+    analogWrite(right_pwm_pin, total_correction - base_speed);
+    //analogWrite(left_pwm_pin, total_correction - base_speed);
+    //analogWrite(right_pwm_pin, 50);
+    // Serial.print("Spinning Right Backwards: ");
+    // Serial.println(total_correction - base_speed);
   }
-  if (-total_correction > base_speed ) {
+  else if (-total_correction > base_speed ) {
     digitalWrite(left_dir_pin, HIGH);
-    analogWrite(left_pwm_pin,(-total_correction/4 - base_speed));
+    analogWrite(left_pwm_pin,(-total_correction - base_speed));
+    //analogWrite(right_pwm_pin, total_correction - base_speed);
+    //analogWrite(left_pwm_pin, 50);
+    // Serial.print("Spinning Left Backwards: ");
+    // Serial.println(-total_correction - base_speed);
 
   }
   else {
@@ -152,6 +160,9 @@ void loop() {
     digitalWrite(left_dir_pin, LOW);
     analogWrite(left_pwm_pin,base_speed + steering_correction + Kd_correction);
     analogWrite(right_pwm_pin,base_speed  - steering_correction - Kd_correction);
+    // analogWrite(right_pwm_pin,base_speed);
+    // analogWrite(left_pwm_pin,base_speed);
+    // Serial.println("test");
   }
 
 
