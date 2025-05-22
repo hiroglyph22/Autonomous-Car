@@ -1,7 +1,6 @@
 #include <Servo.h>
 
 #include <ECE3.h>
-String dummy;
 
 uint16_t sensorValues[8];
 //uint16_t summed_values[8];
@@ -13,11 +12,12 @@ int number_samples = 5;
 bool print_directions = true;
 int error = 0;
 int prev_error = 0;
-int base_speed = 30;
+int base_speed = 15;
 int max_error = 3000;
-float Kp = 0.004;
+float Kp = 0.002;
 float Kd = 0;
 int steering_correction = 0;
+int Kd_correction = 0;
 
 const int left_nslp_pin=31; // nslp HIGH ==> awake & ready for PWM
 const int right_nslp_pin=11; // nslp HIGH ==> awake & ready for PWM
@@ -53,7 +53,7 @@ void setup() {
   resetEncoderCount_left();
   resetEncoderCount_right();
 
-  Kd = Kp * 5;
+  Kd = Kp * 4;
 
   delay(2000);
 }
@@ -114,7 +114,9 @@ void loop() {
   summed_values[6] /= 1469;
   summed_values[7] /= 1305;
 
-  error = (summed_values[0] * -15 + summed_values[1] * -14 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 14 + summed_values[7] * 15) / 8;
+  error = (summed_values[0] * -30 + summed_values[1] * -16 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 16 + summed_values[7] * 30) / 8;
+
+  //error = (summed_values[0] * -15 + summed_values[1] * -14 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 14 + summed_values[7] * 15) / 8;
   // Serial.println(summed_values[0]);
   // Serial.println(summed_values[1]);
   // Serial.println(summed_values[2]);
@@ -125,7 +127,6 @@ void loop() {
   // Serial.println(summed_values[7]);
   // Serial.println();
 
-  //Serial.println(error);
   steering_correction = -Kp * error;
 
   Kd_correction = Kd * (error - prev_error);  
@@ -135,8 +136,24 @@ void loop() {
   
   // ChangeWheelSpeeds(0, steering_correction, 0, -steering_correction);
 
-  analogWrite(left_pwm_pin,base_speed + steering_correction + Kd_correction);
-  analogWrite(right_pwm_pin,base_speed + -steering_correction - Kd_correction);
+  int total_correction = steering_correction + Kd_correction;
+
+  if (total_correction > base_speed) {
+    digitalWrite(right_dir_pin,HIGH);
+    analogWrite(right_pwm_pin, total_correction/4 - base_speed);
+  }
+  if (-total_correction > base_speed ) {
+    digitalWrite(left_dir_pin, HIGH);
+    analogWrite(left_pwm_pin,(-total_correction/4 - base_speed));
+
+  }
+  else {
+    digitalWrite(right_dir_pin, LOW);
+    digitalWrite(left_dir_pin, LOW);
+    analogWrite(left_pwm_pin,base_speed + steering_correction + Kd_correction);
+    analogWrite(right_pwm_pin,base_speed  - steering_correction - Kd_correction);
+  }
+
 
   // // // Print average values (average value = summed_values / number_samples
   // // for (unsigned char i = 0; i < 8; i++) {
@@ -146,4 +163,5 @@ void loop() {
   // // Serial.println();
   
   prev_error = error;
+
 }
