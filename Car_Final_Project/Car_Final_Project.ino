@@ -126,6 +126,27 @@ void loop() {
   // Serial.println(summed_values[6]);
   // Serial.println(summed_values[7]);
   // Serial.println();
+  // delay(500);
+  // Serial.print(summed_values[0] + " " + summed_values[1] + " " + summed_values[2] + " " + summed_values[3] + " " + summed_values[4] + " " + summed_values[5] + " " + summed_values[6] + " " + summed_values[7]);
+  // Serial.println();
+  int sum1 = 0;
+  int sum2 = 0;
+  for (int i = 0; i <= 7; i++) {
+    if (summed_values[i] > 0) {
+      sum1 += summed_values[i];
+    }
+    if (sum1 > 750 && (i+2) <= 7) {
+      for (int j = i + 2; j <= 7; j++) {
+        if (summed_values[j] > 0) {
+          sum2 += summed_values[j];
+        }
+      }
+    }
+    if (sum2 > 750) {
+      Serial.println("Split detected.");
+    }
+  }
+
 
   steering_correction = -Kp * error;
 
@@ -137,6 +158,8 @@ void loop() {
   // ChangeWheelSpeeds(0, steering_correction, 0, -steering_correction);
 
   int total_correction = steering_correction + Kd_correction;
+  
+
 
   if (total_correction > base_speed) {
     digitalWrite(right_dir_pin,HIGH);
