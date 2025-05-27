@@ -12,12 +12,13 @@ int number_samples = 5;
 bool print_directions = true;
 int error = 0;
 int prev_error = 0;
-int base_speed = 15;
+int base_speed = 20;
 int max_error = 3000;
-float Kp = 0.003;
+float Kp = 0.0055;
 float Kd = 0;
 int steering_correction = 0;
 int Kd_correction = 0;
+int prevsum1 = 0;
 
 const int left_nslp_pin=31; // nslp HIGH ==> awake & ready for PWM
 const int right_nslp_pin=11; // nslp HIGH ==> awake & ready for PWM
@@ -31,7 +32,7 @@ const int LED_RF = 75;
 //hehe red amogus sus :)
 void setup() {
   ECE3_Init();
-  Serial.begin(9600);  // set the data rate in bits per second for serial data transmission
+    Serial.begin(115200); // set the data rate in bits per second for serial data transmission
   
   pinMode(left_nslp_pin,OUTPUT);
   pinMode(left_dir_pin,OUTPUT);
@@ -114,7 +115,6 @@ void loop() {
   summed_values[6] /= 1469;
   summed_values[7] /= 1305;
 
-  error = (summed_values[0] * -40 + summed_values[1] * -20 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 20 + summed_values[7] * 40) / 8;
 
   //error = (summed_values[0] * -15 + summed_values[1] * -14 + summed_values[2] * -12 + summed_values[3] * -8 + summed_values[4] * 8 + summed_values[5] * 12 + summed_values[6] * 14 + summed_values[7] * 15) / 8;
   // Serial.println(summed_values[0]);
@@ -126,39 +126,110 @@ void loop() {
   // Serial.println(summed_values[6]);
   // Serial.println(summed_values[7]);
   // Serial.println();
-  // delay(500);
+  // delay(1000);
   // Serial.print(summed_values[0] + " " + summed_values[1] + " " + summed_values[2] + " " + summed_values[3] + " " + summed_values[4] + " " + summed_values[5] + " " + summed_values[6] + " " + summed_values[7]);
   // Serial.println();
+
+  bool turnAround = true;
+  for (int i = 0; i <= 7; i++) {
+    if (summed_values[i] < 600) {
+      turnAround = false;
+    }
+  }
+  if (turnAround == true) {
+    resetEncoderCount_left();
+    resetEncoderCount_right();
+    while (getEncoderCount_left() < 360 && getEncoderCount_right() < 360) {
+          digitalWrite(right_dir_pin,HIGH);
+          analogWrite(right_pwm_pin, base_speed);
+          digitalWrite(left_dir_pin, LOW);
+          analogWrite(left_pwm_pin, base_speed);
+    }
+  }
+
+
+
+else {
   int sum1 = 0;
   int sum2 = 0;
-  for (int i = 0; i <= 7; i++) {
+
+  bool followRight = false;
+
+  for (int i = 0; i <= 7; i++) {    
+
     if (summed_values[i] > 0) {
       sum1 += summed_values[i];
+
     }
-    if (sum1 > 750 && (i+2) <= 7) {
-      for (int j = i + 2; j <= 7; j++) {
+  
+
+    if (sum1 > 800 && (i+3) <= 7) {
+      for (int j = i + 3; j <= 7; j++) {
         if (summed_values[j] > 0) {
           sum2 += summed_values[j];
         }
       }
     }
-    if (sum2 > 750) {
-      Serial.println("Split detected.");
-    }
-  }
 
+    if (sum1 - prevsum1 > 2000 || prevsum1 - sum1 > 2000) {
+      followRight = true;
+    }
+
+    if (sum2 > 800) {
+      //split detected
+      // Serial.println("Split detected.");
+      // Serial.println(summed_values[0]);
+      // Serial.println(summed_values[1]);
+      // Serial.println(summed_values[2]);
+      // Serial.println(summed_values[3]);
+      // Serial.println(summed_values[4]);
+      // Serial.println(summed_values[5]);
+      // Serial.println(summed_values[6]);
+      // Serial.println(summed_values[7]);
+      // Serial.println();
+      if (followRight) {
+        summed_values[7] = 0;
+        summed_values[6] = 0;
+        summed_values[5] = 0;
+        summed_values[4] = 0;
+        summed_values[3] = 0;
+      }
+      else {
+        summed_values[0] = 0;
+        summed_values[1] = 0;
+        summed_values[2] = 0;
+        summed_values[3] = 0;
+        summed_values[4] = 0;
+      // delay(500);
+      }
+    } else {
+      followRight = false;
+    }
+
+  }
+  prevsum1 = 0;
+
+
+}
+
+  error = (summed_values[0] * -4 + summed_values[1] * -2 + summed_values[2] * -1.2 + summed_values[3] * -0.8 + summed_values[4] * 0.8 + summed_values[5] * 1.2 + summed_values[6] * 2 + summed_values[7] * 4);
 
   steering_correction = -Kp * error;
 
-  Kd_correction = Kd * (error - prev_error);  
+  Kd_correction = -1 * Kd * (error - prev_error);  
 
+  // Serial.print("Steering_correction: ");
   // Serial.println(steering_correction);
   // Serial.println();
-  
+  // Serial.print("Kd_correction: ");
+  // Serial.println(Kd_correction);
+  // Serial.println();
   // ChangeWheelSpeeds(0, steering_correction, 0, -steering_correction);
 
   int total_correction = steering_correction + Kd_correction;
   
+  // Serial.println(total_correction);
+  // Serial.println();
 
 
   if (total_correction > base_speed) {
@@ -169,7 +240,7 @@ void loop() {
     // Serial.print("Spinning Right Backwards: ");
     // Serial.println(total_correction - base_speed);
   }
-  else if (-total_correction > base_speed ) {
+  else if (-total_correction > base_speed) {
     digitalWrite(left_dir_pin, HIGH);
     analogWrite(left_pwm_pin,(-total_correction - base_speed));
     //analogWrite(right_pwm_pin, total_correction - base_speed);
