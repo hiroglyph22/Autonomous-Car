@@ -14,9 +14,9 @@ int number_samples = 5;
 bool print_directions = true;
 int error = 0;
 int prev_error = 0;
-int base_speed = 30;
+int base_speed = 20;
 int max_error = 3000;
-float Kp = 0.00825;
+float Kp = 0.0055;
 float Kd = 0;
 int steering_correction = 0;
 int Kd_correction = 0;
@@ -50,8 +50,7 @@ void setup() {
   // digitalWrite(left_nslp_pin,LOW);
   // digitalWrite(right_nslp_pin,LOW);
   
-  digitalWrite(left_dir_pin,LOW);  // Set car direction to forward
-  digitalWrite(right_dir_pin,LOW);
+
 
   resetEncoderCount_left();
   resetEncoderCount_right();
@@ -62,6 +61,9 @@ void setup() {
 }
 
 void loop() {
+    digitalWrite(right_dir_pin, LOW);
+    digitalWrite(left_dir_pin, LOW);
+
 
   //dummy = Serial.readString();
 
@@ -224,9 +226,9 @@ else {
 
   error = (summed_values[0] * -4 + summed_values[1] * -2 + summed_values[2] * -1.2 + summed_values[3] * -0.8 + summed_values[4] * 0.8 + summed_values[5] * 1.2 + summed_values[6] * 2 + summed_values[7] * 4);
 
-  steering_correction = -Kp * error;
+  steering_correction = Kp * error;
 
-  Kd_correction = -1 * Kd * (error - prev_error);  
+  Kd_correction = Kd * (error - prev_error);  
 
   // Serial.print("Steering_correction: ");
   // Serial.println(steering_correction);
@@ -240,34 +242,38 @@ else {
   
   // Serial.println(total_correction);
   // Serial.println();
+  int left_speed = base_speed - total_correction;
+  int right_speed = base_speed + total_correction;
 
-
-  if (total_correction > base_speed) {
+  if (right_speed < 0 && error < 0) {
     digitalWrite(right_dir_pin,HIGH);
-    analogWrite(right_pwm_pin, 3 * (total_correction -  base_speed)/4);
+    right_speed = right_speed * -1.25;
+    left_speed = left_speed * 1.5;
+
+    // analogWrite(right_pwm_pin, 3 * (total_correction -  base_speed)/4);
     //analogWrite(left_pwm_pin, total_correction - base_speed);
-    analogWrite(left_pwm_pin, 3 * base_speed/4);
+    // analogWrite(left_pwm_pin, 3 * base_speed/4);
     // Serial.print("Spinning Right Backwards: ");
     // Serial.println(total_correction - base_speed);
   }
-  else if (-total_correction > base_speed) {
+  else if (left_speed < 0 && error > 0) {
     digitalWrite(left_dir_pin, HIGH);
-    analogWrite(left_pwm_pin,(3 * (-total_correction - base_speed)/4));
+    // analogWrite(left_pwm_pin,(3 * (-total_correction - base_speed)/4));
+    left_speed = left_speed * -1.25;
+    right_speed = right_speed * 1.5;
+
     //analogWrite(right_pwm_pin, total_correction - base_speed);
-    analogWrite(right_pwm_pin, 3 * base_speed/4);
+    // analogWrite(right_pwm_pin, 3 * base_speed/4);
     // Serial.print("Spinning Left Backwards: ");
     // Serial.println(-total_correction - base_speed);
 
   }
-  else {
-    digitalWrite(right_dir_pin, LOW);
-    digitalWrite(left_dir_pin, LOW);
-    analogWrite(left_pwm_pin,base_speed + steering_correction + Kd_correction);
-    analogWrite(right_pwm_pin,base_speed  - steering_correction - Kd_correction);
+    analogWrite(left_pwm_pin,left_speed);
+    analogWrite(right_pwm_pin,right_speed);
     // analogWrite(right_pwm_pin,base_speed);
     // analogWrite(left_pwm_pin,base_speed);
     // Serial.println("test");
-  }
+
 
 
   // // // Print average values (average value = summed_values / number_samples
