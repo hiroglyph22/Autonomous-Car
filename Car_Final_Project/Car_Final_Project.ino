@@ -7,14 +7,16 @@ uint16_t sensorValues[8];
 
 int current_position = -40;
 int increment_position = 4;
+bool turnAround = false;
+int turnAroundCount = 0;
 
 int number_samples = 5;
 bool print_directions = true;
 int error = 0;
 int prev_error = 0;
-int base_speed = 20;
+int base_speed = 30;
 int max_error = 3000;
-float Kp = 0.0055;
+float Kp = 0.00825;
 float Kd = 0;
 int steering_correction = 0;
 int Kd_correction = 0;
@@ -129,11 +131,15 @@ void loop() {
   // delay(1000);
   // Serial.print(summed_values[0] + " " + summed_values[1] + " " + summed_values[2] + " " + summed_values[3] + " " + summed_values[4] + " " + summed_values[5] + " " + summed_values[6] + " " + summed_values[7]);
   // Serial.println();
-
-  bool turnAround = true;
   for (int i = 0; i <= 7; i++) {
-    if (summed_values[i] < 600) {
+    if (summed_values[i] > 700) {
+      if (i == 7) {
+        turnAround = true;
+      }
+    }
+    else {
       turnAround = false;
+      break;
     }
   }
   if (turnAround == true) {
@@ -141,10 +147,11 @@ void loop() {
     resetEncoderCount_right();
     while (getEncoderCount_left() < 360 && getEncoderCount_right() < 360) {
           digitalWrite(right_dir_pin,HIGH);
-          analogWrite(right_pwm_pin, base_speed);
+          analogWrite(right_pwm_pin, 60);
           digitalWrite(left_dir_pin, LOW);
-          analogWrite(left_pwm_pin, base_speed);
+          analogWrite(left_pwm_pin, 60);
     }
+    turnAroundCount++;
   }
 
 
@@ -153,7 +160,6 @@ else {
   int sum1 = 0;
   int sum2 = 0;
 
-  bool followRight = false;
 
   for (int i = 0; i <= 7; i++) {    
 
@@ -171,9 +177,9 @@ else {
       }
     }
 
-    if (sum1 - prevsum1 > 2000 || prevsum1 - sum1 > 2000) {
-      followRight = true;
-    }
+    // if (sum1 - prevsum1 > 2000 || prevsum1 - sum1 > 2000) {
+    //   followRight = true;
+    // }
 
     if (sum2 > 800) {
       //split detected
@@ -187,7 +193,8 @@ else {
       // Serial.println(summed_values[6]);
       // Serial.println(summed_values[7]);
       // Serial.println();
-      if (followRight) {
+
+      if (turnAroundCount > 0) {
         summed_values[7] = 0;
         summed_values[6] = 0;
         summed_values[5] = 0;
@@ -195,16 +202,19 @@ else {
         summed_values[3] = 0;
       }
       else {
+
+
         summed_values[0] = 0;
         summed_values[1] = 0;
         summed_values[2] = 0;
         summed_values[3] = 0;
         summed_values[4] = 0;
-      // delay(500);
       }
-    } else {
-      followRight = false;
-    }
+      // delay(500);
+      // }
+    // } else {
+    //   followRight = false;
+    // }
 
   }
   prevsum1 = 0;
@@ -234,17 +244,17 @@ else {
 
   if (total_correction > base_speed) {
     digitalWrite(right_dir_pin,HIGH);
-    analogWrite(right_pwm_pin, total_correction - base_speed);
+    analogWrite(right_pwm_pin, 3 * (total_correction -  base_speed)/4);
     //analogWrite(left_pwm_pin, total_correction - base_speed);
-    //analogWrite(right_pwm_pin, 50);
+    analogWrite(left_pwm_pin, 3 * base_speed/4);
     // Serial.print("Spinning Right Backwards: ");
     // Serial.println(total_correction - base_speed);
   }
   else if (-total_correction > base_speed) {
     digitalWrite(left_dir_pin, HIGH);
-    analogWrite(left_pwm_pin,(-total_correction - base_speed));
+    analogWrite(left_pwm_pin,(3 * (-total_correction - base_speed)/4));
     //analogWrite(right_pwm_pin, total_correction - base_speed);
-    //analogWrite(left_pwm_pin, 50);
+    analogWrite(right_pwm_pin, 3 * base_speed/4);
     // Serial.print("Spinning Left Backwards: ");
     // Serial.println(-total_correction - base_speed);
 
@@ -269,4 +279,5 @@ else {
   
   prev_error = error;
 
+}
 }
