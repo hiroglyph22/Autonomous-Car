@@ -16,7 +16,7 @@ int error = 0;
 int prev_error = 0;
 int base_speed = 30;
 int max_error = 3000;
-float Kp = 0.00975;
+float Kp = 0.00990;
 float Kd = 0;
 int steering_correction = 0;
 int Kd_correction = 0;
@@ -56,13 +56,13 @@ void setup() {
   resetEncoderCount_left();
   resetEncoderCount_right();
 
-  Kd = Kp * 4;
+  Kd = Kp * 4.25;
 
   delay(2000);
 }
 
 void loop() {
-
+  
   //dummy = Serial.readString();
 
   // Read raw sensor values
@@ -143,6 +143,12 @@ void loop() {
     }
   }
   if (turnAround == true) {
+    
+    turnAroundCount++;
+    if (turnAroundCount > 1) {
+      digitalWrite(left_nslp_pin,LOW);
+      digitalWrite(right_nslp_pin,LOW);
+    }
     resetEncoderCount_left();
     resetEncoderCount_right();
     while (getEncoderCount_left() < 360 && getEncoderCount_right() < 360) {
@@ -151,7 +157,7 @@ void loop() {
           digitalWrite(left_dir_pin, LOW);
           analogWrite(left_pwm_pin, 60);
     }
-    turnAroundCount++;
+    
   }
 
 
@@ -183,23 +189,12 @@ else {
 
     if (sum2 > 800) {
       //split detected
-      // Serial.println("Split detected.");
-      // Serial.println(summed_values[0]);
-      // Serial.println(summed_values[1]);
-      // Serial.println(summed_values[2]);
-      // Serial.println(summed_values[3]);
-      // Serial.println(summed_values[4]);
-      // Serial.println(summed_values[5]);
-      // Serial.println(summed_values[6]);
-      // Serial.println(summed_values[7]);
-      // Serial.println();
+
 
       if (turnAroundCount > 0) {
         summed_values[7] = 0;
         summed_values[6] = 0;
         summed_values[5] = 0;
-        summed_values[4] = 0;
-        summed_values[3] = 0;
       }
       else {
 
@@ -207,8 +202,6 @@ else {
         summed_values[0] = 0;
         summed_values[1] = 0;
         summed_values[2] = 0;
-        summed_values[3] = 0;
-        summed_values[4] = 0;
       }
       // delay(500);
       // }
@@ -219,10 +212,20 @@ else {
   }
   prevsum1 = 0;
 
+      // Serial.println(summed_values[0]);
+      // Serial.println(summed_values[1]);
+      // Serial.println(summed_values[2]);
+      // Serial.println(summed_values[3]);
+      // Serial.println(summed_values[4]);
+      // Serial.println(summed_values[5]);
+      // Serial.println(summed_values[6]);
+      // Serial.println(summed_values[7]);
+      // Serial.println();
+      // delay(1000);
 
 }
 
-  error = (summed_values[0] * -4 + summed_values[1] * -2 + summed_values[2] * -1.2 + summed_values[3] * -0.8 + summed_values[4] * 0.8 + summed_values[5] * 1.2 + summed_values[6] * 2 + summed_values[7] * 4);
+  error = (summed_values[0] * -4 + summed_values[1] * -2 + summed_values[2] * -1.2 + summed_values[3] * -1 + summed_values[4] * 1 + summed_values[5] * 1.2 + summed_values[6] * 2 + summed_values[7] * 4);
 
   steering_correction = -Kp * error;
 
